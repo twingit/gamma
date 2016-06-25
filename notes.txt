@@ -34,3 +34,382 @@
 		<?php } ?>
 	</tbody>
 </table>
+
+Deployment Notes
+
+***LAUNCH AN INSTANCE***
+
+Our first step is to choose what kind of computer we want to buy (we will be choosing the free version) and turn it on. Only once we have this computer up and running can we connect to the computer in our next tab.
+
+1. Sign up should only take 3-5 minutes. Once done, go to AWS console and log in: aws.amazon.com/console/. Choose EC2 [Elastic Compute Cloud] under Compute section:
+
+2. Once inside the EC2 dashboard, we can launch our instance. Go ahead and click the large blue button that says 'Launch Instance'
+
+3. Choose an Amazon Machine Image (AMI). The machine that we will be using is Ubuntu Server 14.04 LTS (PV), SSD Volume Type. [What's the difference between this and Ubuntu Server 14.04 LTS (HVM), SSD Volume Type, i.e. What is PV vs. HVM?*] Again, Amazon offers this for free. Click the Select button.
+
+*Answer (from Stack Exchange): Amazon runs on Xen, which provides Para-Virtualization (PV) or Hardware-Assisted Virtualization (HVM) [Hardware-Assisted Virtual Machine?].
+
+Para-Virtualization used to be the recommended choice, as it gave you better performance (with a much closer integration to the virtualization host, through patched specialized kernels/drivers on both the host and the guest).
+
+Hardware-Assisted Virtualization uses the benefits provided in modern hardware, and it doesn't require any kind of custom kernel or patches. Recent benchmarks has proven that HVM is actually faster on certain workloads.
+
+4. Now we get to choose how powerful we want this computer to be. Let's go with the t2.micro or t1.micro or whatever free instance is available. Click on 'Next: Configure Instance Details' so that we can make more configurations. We will be using mostly default configurations, but it is good to know what you are able to customize.
+
+5. We won't be changing any of the default configurations for our instance details. Click 'Next: Add Storage'
+
+6. This is where we want to specify how much storage we want. We get 30 GB for free and amazon has set up an initial storage of 8 GB. We will leave this alone for now. Click on 'Next: Tag Instance'
+
+7. We can give our name an instance by 'tagging' it. This is useful to do if you have a lot of instances running, but since this is our first one, we won't tag our instance. Go ahead and click 'Next: Configure Security Group'
+
+8. Now in the Configure Security Group page, you have the option to create a new security group or just use an existing one. Let's create a new Security Group and let's name it as 'Test Launch' with the description of 'Amazon EC2 Test Launch'.
+
+Under this Security Group, The default allowed traffic is SSh with a protocol of TCP, this means that we can only access this instance via SSh (PuTTy if you're using Windows) or the Terminal if you're using Mac. We don't want that, we want it to allow MYSQL and HTTP as well. Let's add some rules:
+
+Type / Protocol / Port Range / Source
+
+SSh / TCP [Transmission Control Protocol] / 22 / Anywhere 0.0.0.0/0
+HTTP / TCP / 80 / Anywhere 0.0.0.0/0
+MySQL / TCP / 3306 / Anywhere 0.0.0.0/0
+
+We did this on our local machine as well. For example we opened up port 8888 to host our web server on our localhost. Another example is most websites open up port 80 to handle HTTP requests. If you are going to cnn.com, you are going to cnn.com:80 but the browser assumes we are going to that port since we are making an HTTP request. We will allow our computer to listen to three different protocols, HTTP, MySQL, and SSh. HTTP to properly respond when a client requests something, MySQL to host our database (we have MySQL Workbench on our local computer that did this), and SSh which will be used for us to sign in securely.
+
+9. Amazon will warn us that our EC2 instance might not be very secure. Amazon does a great job helping you secure your server. However, for our first instance, our EC2 is secure enough. Go ahead and click 'Launch'
+
+10. One last step, we need to create and download a new key pair. Just imagine that you are downloading a virtual KEY in order for you to access your own server. The key will be saved with a .pem extension. Let's name this key pair as 'myfirstinstance' then hit 'Download Key Pair'
+
+11. Make sure you know where you downloaded your key, our 'myfirstinstance.pem' file. Then, click on 'Launch Instances'
+
+12. We are so close! It will take only a few seconds for our instance to be set up properly. Click on 'View Instances' to check on the progress of your instance.
+
+13. Once the Instance State is 'running', find the Public DNS (a URL where others can access the files of this instance, we will change this long URL with our own domain later), copy it, and paste it on your browser. This URL will not work yet. We have to connect our instance first using our key 'myfirstinstance.pem' file and install programs to it so that it can be used to host a website. But.... CONGRATULATIONS!!!! :) Make sure you celebrate. You just launched your first EC2 instance. We will connect with this instance on the next tab.
+
+***CONNECTING TO EC2***
+
+1. Run this command to connect to your EC2. You connect using ssh command, specifying where your key file is, then specifying your user name followed by an @ sign and its public DNS name.
+
+Desktop TCM3$ ssh -i phpapptinstance.pem ubuntu@ec2-54-183-111-126.us-west-1.compute.amazonaws.com
+
+[Make sure you're on Desktop!] [Computer name] [SSh (Secure Shell) - "We can access out EC2 by using ssh (using a key) because we allowed this in our Security Group"] [-i...?] ["Path to our key file. Since we are inside the Desktop in our terminal we can just write the name."] [ubuntu@ - "This is our user name which is 'ubuntu' by default for Ubuntu systems"; this is followed by the public DNS name for our instance]
+
+2. Your computer will ask you if you really want to access this computer ["Are you sure you want to continue connecting (yes/no)?"]. Type in yes and click enter.
+
+3. The command will not work because our key file must be publicly viewable for SSH to work.
+
+4. We must first modify our 'phpapptinstance.pem' file so that it can be publicly viewable by running this command: "chmod 400 phpapptinstance.pem" ["chmod" is the Linux shell command for "	Change Permissions". Stands for "Change Mode"?]. Then let's run the ssh command again: ssh -i phpapptinstance.pem ubuntu@ec2-54-183-111-126.us-west-1.compute.amazonaws.com
+
+5. Congratulations! We have successfully connected with our remote EC2 instance. Notice how the terminal prompt now displays Ubuntu ["ubuntu@ip-172-31-17-223:~$ "]. Make sure you celebrate!
+
+***INSTALL***
+
+Remember when we had to install a bunch of stuff to set up our development environment for our computer? We have to do the same for this EC2 instance. It only has some basic programs installed. We need to download our LAMP (Linux-Apache-MySQL-PHP) stack. We already have Ubuntu installed, the operating system we chose when we launched our instance, which is a flavor of Linux. We will also have to download Apache which is a web server that will serve responses to our users' requests. We also have to download MySQL for database storage. Oh, yea! And we have to download PHP to complete our LAMP stack.
+
+Thankfully, there is a command that will install all the necessary programs for our basic LAMP stack. There are so many programs that no one can remember all of them. However, make sure you look at the terminal and see what kinds of programs are being installed. We will also go over the command to uninstall the LAMP stack and we can see from that command what programs were installed for us.
+
+Note: Make sure you are logged in to your ubuntu computer (terminal for Mac, PuTTy for Windows)
+
+1. First, let's make sure all of our packages are up to date by running this command:
+
+sudo apt-get update && sudo apt-get upgrade
+
+2. Now run this command to install the LAMP stack:
+
+sudo apt-get install lamp-server^
+
+(Note: "Write failed: Broken pipe" means you need to login to ubuntu again...)
+
+This command will download a bunch of programs and as it is installing MySQL it will ask you to set a password. You are going to need to password to interact with you MySQL in this EC2 instance so do not forget this. Once all of the programs are done downloading, scroll up and see familiar words such as Apache, MySQL, and PHP.
+
+Congratulations! Your EC2 instance is now a developing machine! Go ahead and navigate to the Public DNS of your EC2 instance.
+
+How cool is that? You are now officially a Full Stack Developer. Now, we don't want our users to see this default page that our server is displaying. Where could this file be? Go ahead and type "pwd" in your terminal. This will show where you are in the file structure of the computer. It stands for "path working directory" [or "print working directory"?].
+
+[You get this: /home/ubuntu]
+
+We want to be in the root directory so we will change our directory to '/' with this command:
+
+cd /
+
+[You now get this, "ubuntu@ip-172-31-17-223:/$" instead of this, "ubuntu@ip-172-31-17-223:~$"]
+
+Now, let's type pwd again to make sure that we are indeed in the '/' directory [you get: "/"]. Now let's see what is stored in the root directory by using the ls command to list out all the directories and files located in '/'.
+
+bin   dev  home        lib    lost+found  mnt  proc  run   srv  tmp  var
+boot  etc  initrd.img  lib64  media       opt  root  sbin  sys  usr  vmlinuz
+
+We want to go inside the 'var' directory. We can change directory to 'var' by running this command:
+
+cd var [ubuntu@ip-172-31-17-223:/var$]
+
+Let's see what is inside this directory by using our 'ls' command again. You will find a directory called 'www'. This looks promising. Let's change our directory into 'www'.
+
+backups  cache  crash  lib  local  lock  log  mail  opt  run  spool  tmp  www
+
+cd www [ubuntu@ip-172-31-17-223:/var/www$]
+
+When we use the 'ls' command to see what is inside the 'www' directory, we will find that there is [only] a directory in there named 'html'. We are very close. Now let's change our directory to 'html' by running this command:
+
+cd html [ubuntu@ip-172-31-17-223:/var/www/html$]
+
+We found index.html! [Forgot to say "ls" - but it is indeed there!] We only know where to find this file because this is the location where the HTML files are stored in most Ubuntu servers. Now how do we open this file? We won't be able to use Sublime Text. We are going to have to use one of the text editors that are already installed in this Ubuntu computers. Our two main choices will be vi and nano. We will be using vi in this tutorial. Type in this command to open index.html with vi:
+
+sudo vi index.html
+
+Notice how we prefixed our command with 'sudo' ["superuser do"] again. This is because we want to save this file and for us to write to a file we need to let the computer know that we are the superuser. Press Ctrl-D [like "Page Down"] to quickly scan the file. This is just the HTML and CSS of the default Ubuntu page we saw when we navigated to our Public DNS. Now let's go back to the terminal by quitting vi. You can quit vi by running this command:
+
+:q
+
+If you had made any changes and you want to quit without making any changes you would run this command:
+
+:q!
+
+We are only going to cover the basic commands in vi for us to launch our application. Now let's remove this index.html file so that we can just make one ourselves. You can do this by running this command in the terminal:
+
+You will get an error that says 'Permission Denied'. [Actually, I got a question: "rm: remove write-protected regular file ‘index.html’?" I pressed enter, and it didn't remove the file.] You have to let the computer know that you are the superuser and you want this to happen. Go ahead and prefix the previous command with 'sudo':
+
+sudo rm index.html
+
+Go ahead and type 'ls' to ensure that the file has been deleted. We can open up a new file called 'index.html' (if the file called 'index.html' already exists it would open up that file) using vi by running this command:
+
+vi index.html ["index.html" [New File]]
+
+If you have tried typing on this file, you will have seen a bunch of errors. This is because you are not in Insert Mode. vi is known for having different modes and the default mode is Normal. To enter Insert Mode, press 'i'. On the bottom of the terminal screen, you should see the word INSERT in bold notifying that you have now entered Insert Mode. If you want to navigate to a different part of the file and insert, you must first exit Insert Mode by pressing the ESC key. Then, go to the area you want to edit and enter Insert Mode again by pressing 'i'. vi is one of the hardest text editors to master so feel free to type out your HTML on your Sublime Text locally then copy it and paste it into vi while you are on Insert Mode. Go ahead and type out basic HTML that says something like, "I am now Full Stack." You can save the file by running this command while you are in Normal Mode:
+
+:w
+
+Or you can use this command which will save and quit vi.
+
+:wq
+
+Now navigate to your Public DNS to see the changes that you made. You should be able to see the changes almost immediately but in some cases it might take longer. Congratulations you have deployed your first application on the cloud!
+
+*** DETOUR: DEPLOY FRESH COPY OF CODEIGNITER ***
+
+What we have accomplished so far:
+
+1. Launched an Amazon EC2 Instance.
+2. Logged into our Ubuntu cloud server.
+3. Updated Ubuntu.
+4. Installed a firewall and enabled the necessary ports (3306, 22, and 80).
+5. Installed Apache, MySQL, and PHP (via lamp-server package).
+6. Created an index.html file and displayed an "I am now Full Stack" message in our browser using the public IP from our EC2 instance.
+
+Now in this tab, we will launch a fresh copy of Codeigniter.
+
+*Let's Get CI Up and Running!*
+
+We will download a fresh copy of CodeIgniter within /var/www/html/ folder, make sure you cd into it now before doing any of the steps below:
+
+1. Install unzip to allow us to unzip any .zip files: sudo apt-get install unzip
+
+2. Download CodeIgniter, run: sudo wget http://ellislab.com/asset/ci_download_files/reactor/CodeIgniter_2.1.2.zip (update the zip file name based latest version of CI; you may check their latest version at this link).
+
+3. CodeIgniter will be saved in the directory you are currently on. It's going to be saved as "download" file. We then use unzip to unzip it, run: sudo unzip download (or sudo unzip <CodeIgniter directory>) [only the second option worked for me].
+
+4. If you run: ls, you will see a CodeIgniter_2.2.0 (The current version). You can now remove the "download" file after you unzip it: sudo rm download. [I had to specify the directory name again...]
+
+5. Now our fresh copy of CodeIgniter is ready. We can go ahead and run our CodeIgniter app in the browser, type in your public IP slash CodeIgniter folder name. Example: http://52.11.112.114/CodeIgniter_2.2.0/ and you will see CodeIgniter's welcome page. Congratulations!
+
+*Configuration*
+
+Now its really ugly that we have to type IP slash the codeigniter folder in our URL(http://52.11.112.114/CodeIgniter_2.2.0/ ) It would be nice to link our CodeIgniter directly to our public IP. To do this:
+
+1. Edit 000-default.conf file, run: sudo nano /etc/apache2/sites-enabled/000-default.conf [why the heck are we using nano now?]
+
+2. Look for: DocumentRoot /var/www/html within the 000-default.conf file and change it to: DocumentRoot /var/www/html/CodeIgniter_2.2.0. Save and Exit
+
+Now this step is really important. If you renamed your CodeIgniter folder to something else, make sure that you tell 000-default.conf file about it. You can even remove the html folder within the www folder.
+
+You have the option to download the CodeIgniter application within the www folder instead of html and it would still work, just make sure 000-default.conf file knows where it's at. Example: DocumentRoot /var/www/myfirstinstance
+
+3. Restart your Apache server by running: sudo service apache2 restart
+
+4. Now go visit your site by just typing in the public IP in your browser. YAAAY!
+
+***.htaccess***
+
+After you have deployed your blank CodeIgniter application, go ahead and create a .htaccess with these contents. This file will allow you to not have 'index.php' appended to all of your URLs. The .htaccess should have the following text:
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    #Removes access to the system folder by users.
+    #Additionally this will allow you to create a System.php controller,
+    #previously this would not have been possible.
+    #'system' can be replaced if you have renamed your system folder.
+    RewriteCond %{REQUEST_URI} ^system.*
+    RewriteRule ^(.*)$ /index.php?/$1 [L]
+    #When your application folder isn't in the system folder
+    #This snippet prevents user access to the application folder
+    #Submitted by: Fabdrol
+    #Rename 'application' to your applications folder name.
+    RewriteCond %{REQUEST_URI} ^application.*
+    RewriteRule ^(.*)$ /index.php?/$1 [L]
+    #Checks to see if the user is attempting to access a valid file,
+    #such as an image or css document, if this isn't true it sends the
+    #request to index.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php?/$1 [L]
+</IfModule>
+<IfModule !mod_rewrite.c>
+    # If we don't have mod_rewrite installed, all 404's
+    # can be sent to index.php, and everything works as normal.
+    # Submitted by: ElliotHaughin
+    ErrorDocument 404 /index.php
+</IfModule>
+
+[I can't see the .htaccess file after I created it... but it's there...]
+
+After we have included this .htaccess file, there are three things that we need to do to get .htaccess to work on our website so that our routes look pretty. First, navigate to your /application/config/config.php of your CodeIgniter project and make sure that the $config['index_page'] is equal to "":
+
+$config['index_page'] = "";
+
+Second, our .htaccess needs the rewrite library enabled on our computer to work. We can enable this module by running the following command:
+
+sudo a2enmod rewrite
+
+NOTE: Make sure you restart your server after making any modifications.
+
+sudo service apache2 restart
+
+Third, we have to configure our Apache so that it allows rewriting of the URLs. Let's navigate to /etc/apache2 by running the following command:
+
+cd /etc/apache2
+
+If you type in 'ls' you will see a file called 'apache2.conf.' This is the file where we allow .htaccess. Let's open this file to modify with vi using the following command:
+
+sudo vi apache2.conf
+
+This is a large file so let's search for the part of the file where it says something with 'root.' We can do this in vi by running this command while you are in normal mode.
+
+/root
+
+Then go down a few more lines until you see something like this:
+
+<Directory /var/www/>
+    Options Indexes FollowSymLinks
+    AllowOverride None
+    Require all granted
+</Directory>
+
+Change it to this:
+
+<Directory /var/www/>
+    Options Indexes FollowSymLinks
+    AllowOverride All
+    Require all granted
+</Directory>
+
+Then restart your apache2 server and your .htaccess will now work.
+
+***GITHUB***
+
+In Bash Terminal:
+
+cd into CodeIgniter project
+
+Check "git status"
+
+If "fatal: Not a git repository (or any of the parent directories): .git", then run "git init" [git initialize]
+
+"Initialized empty Git repository in /Users/TCM3/Desktop/CodeIgniter/pokes_exam/.git/"
+
+git add . [git add all]
+
+git commit -m "first commit" [git commit message "message text"]
+
+git remote add origin https://github.com/twingit/pokes_exam.git []
+
+git remote
+origin
+
+git push -u origin master
+
+git status
+On branch master
+
+In Ubuntu Terminal:
+
+ubuntu@ip-172-31-4-3:~$ cd /
+ubuntu@ip-172-31-4-3:/$ cd var/www/html/
+
+git init
+The program 'git' is currently not installed. You can install it by typing:
+sudo apt-get install git
+
+sudo apt-get install git [or 'sudo apt-get install git-all' - which adds a ton more stuff!]
+
+git init
+/var/www/html/.git: Permission denied
+
+sudo git init
+Initialized empty Git repository in /var/www/html/.git/
+
+git status
+
+On branch master
+
+Initial commit
+
+nothing to commit (create/copy files and use "git add" to track)
+
+sudo git remote add origin https://github.com/twingit/pokes_exam.git
+
+On branch master
+
+Initial commit
+
+nothing to commit (create/copy files and use "git add" to track)
+
+git remote
+origin
+
+sudo git pull -u origin master []
+
+git status
+On branch master
+nothing to commit, working directory clean
+
+***NOT NECESSARY...***
+DIDN'T WORK - HAD TO GO BACK TO ROOT (HOW DID YOU DO IT HOWARD?):
+sudo vi etc/apache2/sites-enabled/000-default.conf
+
+
+(Necessary?)
+sudo git pull origin master
+From https://github.com/twingit/pokes_exam
+ * branch            master     -> FETCH_HEAD
+Already up-to-date.
+
+sudo a2enmod rewrite []
+
+sudo service apache2 restart
+
+sudo vi /etc/apache2/apache2.conf
+
+change for www => All
+
+In MySQL Workbench:
+
+Add new connection (plus icon)
+
+Connection Name: [name it!]
+
+Connection Method: Standard TCP/IP over SSH ("Method to use to connect to the RDBMS") []
+
+SSH Hostname: [IP address]:22 ("SSH server hostname, with optional port number.") []
+
+SSH Username: ubuntu ("Name of the SSH user to connect with.") []
+
+SSH Key File: [].pem ("Path to SSH private key file.") [point it to your .pem file]
+
+
+
+
+
+
+
+
+
+
+
